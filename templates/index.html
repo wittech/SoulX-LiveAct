@@ -1,0 +1,754 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>LiveAct</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root { 
+            --primary: #6366f1;
+            --accent: #06b6d4; 
+            --bg: #f4f7f6; 
+            --panel: #ffffff; 
+            --text-main: #2d3436;
+            --text-sub: #636e72;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+        
+        body { 
+            background: var(--bg); 
+            color: var(--text-main); 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            margin: 0; 
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .config-side { 
+            flex: 0 0 580px; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            overflow-y: auto; 
+            padding: 32px 24px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+        }
+        
+        .view-side { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 32px;
+            min-width: 0;
+        }
+        
+        h2 { 
+            font-size: 24px; 
+            margin-bottom: 25px;
+            margin-top: 0; 
+            background: linear-gradient(135deg, var(--primary), var(--accent)); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            font-weight: 800;
+        }
+        
+        label { 
+            font-size: 12px; 
+            color: var(--text-sub); 
+            margin-bottom: 8px; 
+            display: block; 
+            font-weight: 600;
+            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
+        }
+
+        .single-prompt-box {
+            margin-bottom: 20px;
+        }
+
+        .main-prompt {
+            width: 100%;
+            background: #fff;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .main-prompt:hover {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+        }
+
+        .main-prompt:focus {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+        }
+
+        
+        .prompt-item { 
+            background: #f8fafc; 
+            padding: 12px 15px; 
+            border-radius: 12px; 
+            margin-bottom: 12px; 
+            border: 1px solid var(--border); 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            transition: all 0.2s ease;
+        }
+
+        .prompt-item:hover {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+        }
+        
+        .prompt-item input[type="number"] { 
+            width: 55px; 
+            text-align: center; 
+            background: #fff; 
+            border: 1px solid var(--border); 
+            color: var(--text-main); 
+            padding: 8px; 
+            border-radius: 8px; 
+            outline: none;
+        }
+        
+        .p-content { 
+            flex: 1; 
+            min-width: 0;
+            background: #fff; 
+            border: 1px solid var(--border); 
+            color: var(--text-main); 
+            padding: 8px 14px; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            outline: none;
+        }
+
+        .p-content:focus,
+        .prompt-item input:focus {
+            border-color: var(--primary);
+        }
+
+        .time-label { 
+            font-size: 13px; 
+            color: var(--text-sub); 
+            white-space: nowrap; 
+        }
+
+        .remove-btn { 
+            color: #ff7675; 
+            cursor: pointer; 
+            font-size: 18px; 
+            font-weight: bold; 
+            padding: 0 5px; 
+            transition: 0.2s;
+            user-select: none;
+        }
+
+        .remove-btn:hover { 
+            color: #d63031; 
+            transform: scale(1.1); 
+        }
+
+        .add-btn { 
+            background: #fff; 
+            color: var(--text-sub); 
+            border: 2px dashed var(--border); 
+            padding: 12px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            margin-bottom: 25px; 
+            transition: 0.2s; 
+            font-size: 14px; 
+            font-weight: 500;
+        }
+
+        .add-btn:hover { 
+            border-color: var(--primary); 
+            color: var(--primary);
+            background: #f5f3ff; 
+        }
+
+        .fps-box {
+            margin-bottom: 25px;
+        }
+
+        .upload-area { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+            margin-bottom: 25px; 
+        }
+        
+        .file-card { 
+            aspect-ratio: 1 / 1;
+            width: 100%;
+            border: 2px dashed var(--border); 
+            border-radius: 16px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            position: relative; 
+            overflow: hidden; 
+            background: #fbfbfb;
+            transition: 0.2s;
+            color: var(--text-sub);
+            font-size: 13px;
+            padding: 10px;
+        }
+
+        .file-card:hover { 
+            border-color: var(--primary); 
+            background: #f5f3ff; 
+            color: var(--primary); 
+        }
+
+        .file-card img { 
+            position: absolute; 
+            inset: 0;
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain;
+            background: #fff;
+            padding: 8px;
+        }
+
+        .file-card audio {
+            width: 90%;
+            z-index: 2;
+        }
+        
+        .btn-start { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 16px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            font-size: 16px; 
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); 
+            transition: 0.3s;
+        }
+
+        .btn-start:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); 
+        }
+
+        .btn-start:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .video-frame {
+            width: min(72vh, 72vw, 760px);
+            aspect-ratio: 1 / 1;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.10);
+        }
+
+        video { 
+            width: 100%; 
+            height: 100%;
+            object-fit: contain;
+            background: #000; 
+            display: block;
+        }
+
+        .video-info {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #555;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .video-resolution {
+            color: var(--text-sub);
+        }
+
+        #status-bar { 
+            margin-top: 15px; 
+            font-size: 13px; 
+            color: var(--primary); 
+            font-family: 'JetBrains Mono', monospace; 
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        input::-webkit-outer-spin-button, 
+        input::-webkit-inner-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        
+        .config-side::-webkit-scrollbar { 
+            width: 6px; 
+        }
+
+        .config-side::-webkit-scrollbar-thumb { 
+            background: var(--border); 
+            border-radius: 10px; 
+        }
+
+        .file-card audio:not([style*="display:none"]) ~ span {
+            margin-top: 8px;
+            font-size: 11px;
+            text-align: center;
+            z-index: 2;
+        }
+        .resolution-box {
+            margin-bottom: 25px;
+        }
+
+        .resolution-value {
+            width: 100%;
+            background: #fff;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .audio-option-box {
+            margin-bottom: 25px;
+        }
+        
+        .audio-option-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+        
+        .audio-option-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .task-status-card {
+            width: min(72vh, 72vw, 760px);
+            margin-top: 16px;
+            padding: 14px 16px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--text-main);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+        }
+
+        .task-status-card strong {
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+
+        .task-message {
+            margin-top: 8px;
+            color: var(--text-sub);
+            word-break: break-word;
+        }
+
+        .audio-option-box {
+            margin-bottom: 25px;
+        }
+
+        .audio-option-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .audio-option-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="config-side">
+        <h2>LiveAct</h2>
+
+        <label>Prompt <span style="color:#ef4444">*</span></label>
+        <div class="single-prompt-box">
+            <input type="text" id="main-prompt" class="main-prompt" placeholder="Enter main prompt..." required>
+        </div>
+
+        <label>Edit Prompt (Optional)</label>
+        <div id="prompt-list"></div>
+        
+        <button class="add-btn" onclick="addPrompt()">+ Add Time Segment</button>
+
+        <div class="fps-box">
+            <label>FPS: <span id="fps_val" style="color:var(--primary)">20</span></label>
+            <input
+                type="range"
+                id="fps"
+                min="1"
+                max="60"
+                value="20"
+                style="width:100%;"
+                oninput="document.getElementById('fps_val').innerText=this.value"
+            >
+        </div>
+
+        <div class="resolution-box">
+            <label>Resolution</label>
+            <div class="resolution-value">{{ stream_resolution }}</div>
+        </div>
+        <div class="audio-option-box">
+            
+        <label>Stream Audio</label>
+        <div class="audio-option-row">
+            <input type="checkbox" id="stream_with_audio" checked>
+            <span>播放时带音频</span>
+        </div>
+        </div>
+        
+        <label>Base Assets</label>
+        <div class="upload-area">
+            <div class="file-card" onclick="document.getElementById('img_i').click()">
+                <img id="img_p" style="display:none">
+                <span id="img_t">Upload Image</span>
+                <input type="file" id="img_i" accept="image/*" hidden>
+            </div>
+
+            <div class="file-card" id="audio_card" onclick="document.getElementById('audio_i').click()">
+                <audio id="audio_p" controls style="display:none;" onclick="event.stopPropagation()"></audio>
+                <span id="audio_t">Upload Audio</span>
+                <input type="file" id="audio_i" accept="audio/*" hidden>
+            </div>
+        </div>
+
+        <button class="btn-start" id="startBtn" onclick="submitTask()">Generate & Stream</button>
+        <div id="status-bar">Ready</div>
+    </div>
+
+    <div class="view-side">
+        <div class="video-frame">
+            <video id="video" controls></video>
+        </div>
+    
+        <div class="video-info">
+            <span>HLS REAL-TIME VIDEO FEED</span>
+            <span class="video-resolution">Resolution: {{ stream_resolution }}</span>
+        </div>
+    
+        <div class="task-status-card">
+            <div><strong>Task State:</strong> <span id="task-state">Idle</span></div>
+            <div><strong>Chunk Progress:</strong> <span id="chunk-progress">0 / 0</span></div>
+            <div><strong>Stream Ready:</strong> <span id="stream-ready">No</span></div>
+            <div><strong>Done:</strong> <span id="task-done">No</span></div>
+            <div class="task-message" id="task-message">等待任务启动</div>
+        </div>
+    </div>
+
+<script>
+    const video = document.getElementById('video');
+    const btn = document.getElementById('startBtn');
+    const status = document.getElementById('status-bar');
+    let statusPollTimer = null;
+
+    function stopStatusPolling() {
+    if (statusPollTimer) {
+        clearInterval(statusPollTimer);
+        statusPollTimer = null;}
+    }
+
+    function renderTaskStatus(data) {
+        document.getElementById('task-state').innerText = data.stage || data.status || 'unknown';
+        document.getElementById('chunk-progress').innerText =
+            `${data.generated_chunks ?? 0} / ${data.total_chunks ?? '?'}`;
+        document.getElementById('stream-ready').innerText = data.stream_ready ? 'Yes' : 'No';
+        document.getElementById('task-done').innerText = data.is_done ? 'Yes' : 'No';
+        document.getElementById('task-message').innerText = data.message || '';
+
+        if (data.status === 'failed') {
+            status.innerText = data.message || '生成失败';
+            status.style.color = "#ff5252";
+            btn.disabled = false;
+        } else if (data.status === 'finished') {
+            status.innerText = "生成完成";
+            status.style.color = "var(--primary)";
+            btn.disabled = false;
+        } else if (data.status === 'running') {
+            status.innerText = data.message || "任务执行中...";
+            status.style.color = "var(--accent)";
+        } else if (data.status === 'queued') {
+            status.innerText = data.message || "排队中...";
+            status.style.color = "var(--accent)";
+        }
+    }
+
+    function startStatusPolling(taskId) {
+        stopStatusPolling();
+
+        const tick = async () => {
+            try {
+                const res = await fetch(`/task_status/${taskId}`, { cache: 'no-cache' });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                renderTaskStatus(data);
+
+                if (data.status === 'finished' || data.status === 'failed' || data.is_done) {
+                    stopStatusPolling();
+                }
+            } catch (e) {
+                console.warn("状态轮询失败:", e);
+            }
+        };
+
+        tick();
+        statusPollTimer = setInterval(tick, 1000);
+    }
+    function addPrompt() {
+        const container = document.getElementById('prompt-list');
+        const div = document.createElement('div');
+        div.className = 'prompt-item';
+        
+        const items = document.querySelectorAll('.prompt-item');
+        let lastTo = 0;
+        if (items.length > 0) {
+            lastTo = items[items.length - 1].querySelector('.p-to').value;
+        }
+
+        div.innerHTML = `
+            <input type="number" class="p-from" value="${lastTo}" placeholder="0">
+            <span class="time-label">to</span>
+            <input type="number" class="p-to" value="${parseInt(lastTo) + 2}" placeholder="2">
+            <span class="time-label">segment :</span>
+            <input type="text" class="p-content" placeholder="输入当前时段提示词...">
+            <span class="remove-btn" onclick="this.parentElement.remove()">×</span>
+        `;
+        container.appendChild(div);
+    }
+
+    function getPromptData() {
+        const items = document.querySelectorAll('.prompt-item');
+        let data = [];
+
+        items.forEach(item => {
+            const start = parseInt(item.querySelector('.p-from').value) || 0;
+            const end = parseInt(item.querySelector('.p-to').value) || 0;
+            const text = item.querySelector('.p-content').value;
+
+            if (text.trim() !== "") {
+                data.push([start, end, text]);
+            }
+        });
+
+        return data;
+    }
+
+    document.getElementById('img_i').onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            const imgPreview = document.getElementById('img_p');
+            const imgText = document.getElementById('img_t');
+
+            imgPreview.src = url;
+            imgPreview.style.display = 'block';
+            imgText.style.display = 'none';
+        }
+    };
+
+    document.getElementById('audio_i').onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            const audioPreview = document.getElementById('audio_p');
+            const audioText = document.getElementById('audio_t');
+            
+            audioPreview.src = url;
+            audioPreview.style.display = 'block';
+            audioText.style.fontSize = '10px';
+            audioText.style.marginTop = '6px';
+            audioText.innerText = "Selected: " + (
+                file.name.length > 15 ? file.name.substring(0, 12) + "..." : file.name
+            );
+            audioPreview.load();
+        }
+    };
+
+    async function submitTask() {
+        const imgFile = document.getElementById('img_i').files[0];
+        const audioFile = document.getElementById('audio_i').files[0];
+        const prompts = getPromptData();
+        const mainPrompt = document.getElementById('main-prompt').value;
+        const streamWithAudio = document.getElementById('stream_with_audio').checked;
+
+        if (!imgFile || !audioFile) {
+            alert("请完整上传图片和音频素材！");
+            return;
+        }
+
+        // if (!mainPrompt) {
+        //     alert("请填写主提示词！");
+        //     return;
+        // }
+
+        const taskId = "task_" + Date.now();
+        const formData = new FormData();
+        
+        formData.append('task_id', taskId);
+        formData.append('main_prompt', mainPrompt);
+        formData.append('prompt_json', JSON.stringify(prompts));
+        formData.append('fps', document.getElementById('fps').value);
+        formData.append('img_file', imgFile);
+        formData.append('audio_file', audioFile);
+        formData.append('stream_with_audio', streamWithAudio ? 'true' : 'false');
+
+        btn.disabled = true;
+        status.innerText = "正在上传素材并启动 GPU 引擎...";
+        status.style.color = "var(--accent)";
+
+        try {
+            const response = await fetch('/start_stream', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const streamUrl = `/stream/${taskId}/live.m3u8`;
+                status.innerText = "素材上传成功，等待首个视频切片...";
+                startStatusPolling(taskId);
+                pollStreamReady(streamUrl, streamWithAudio);
+            } else {
+                let errMsg = "服务器启动失败";
+                try {
+                    const errData = await response.json();
+                    errMsg = errData.message || errMsg;
+                } catch (_) {}
+                throw new Error(errMsg);
+            }
+        } catch (err) {
+            status.innerText = "启动失败: " + err.message;
+            status.style.color = "#ff5252";
+            btn.disabled = false;
+        }
+    }
+
+    async function pollStreamReady(url, streamWithAudio) {
+        const maxAttempts = 300;
+
+        for (let i = 0; i < maxAttempts; i++) {
+            try {
+                const check = await fetch(url, { method: 'HEAD', cache: 'no-cache' });
+                if (check.ok) {
+                    status.innerText = "检测到切片，播放中...";
+                    initHlsPlayer(url, streamWithAudio);
+                    return;
+                }
+            } catch (e) {}
+            await new Promise(r => setTimeout(r, 2000));
+        }
+
+        status.innerText = "超时：GPU 未能在规定时间内生成切片";
+        status.style.color = "#ff5252";
+        btn.disabled = false;
+    }
+
+    function initHlsPlayer(url, streamWithAudio) {
+        if (window._currentHls) {
+            window._currentHls.destroy();
+            window._currentHls = null;
+        }
+
+        video.muted = !streamWithAudio;
+        video.volume = 1.0;
+
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                manifestLoadingMaxRetry: 10,
+                manifestLoadingRetryDelay: 1000,
+            });
+
+            window._currentHls = hls;
+            hls.loadSource(url);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play().catch(() => {
+                    status.innerText = "自动播放被拦截，请手动点击播放";
+                });
+                btn.disabled = false;
+                status.style.color = "var(--primary)";
+            });
+
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    console.error("HLS 关键错误:", data.type, data);
+                    status.innerText = "播放出现错误，请重新生成";
+                    status.style.color = "#ff5252";
+                    btn.disabled = false;
+                    hls.destroy();
+                    window._currentHls = null;
+                }
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+            video.addEventListener('loadedmetadata', () => {
+                video.play().catch(() => {
+                    status.innerText = "自动播放被拦截，请手动点击播放";
+                });
+                btn.disabled = false;
+                status.style.color = "var(--primary)";
+            }, { once: true });
+        } else {
+            status.innerText = "当前浏览器不支持 HLS 播放";
+            status.style.color = "#ff5252";
+            btn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>

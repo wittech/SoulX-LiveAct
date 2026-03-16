@@ -1,0 +1,22 @@
+[
+    {
+        "prompt": "在录音室中的弹吉他，并深情演唱！",
+        "edit_prompt": {
+            "[0, 4]": "陶醉的跟着音乐点头！"
+        },
+        "cond_image": "examples/image/3.png",
+        "cond_audio": "examples/audio/3.wav"
+    },
+    {
+        "prompt": "一个人在表演脱口秀，做出奇怪的表情！",
+        "edit_prompt": {
+            "[0, 1]": "向前鞠个躬！向前鞠个躬！",
+            "[7, 8]": "睁大眼睛！睁大眼睛！",
+            "[19, 21]": "苦笑！苦笑！",
+            "[25, 42]": "疑惑表情！疑惑表情！",
+            "[48, 54]": "手在面前挥动！手在面前挥动！"
+        },
+        "cond_image": "examples/image/4.png",
+        "cond_audio": "examples/audio/4.wav"
+    }
+]
