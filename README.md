@@ -10,7 +10,7 @@
 
 </div>
 
-**LiveAct** presents a novel framework that enables **lifelike, multimodal-controlled, high-fidelity** human animation video generation for real-time streaming interactions.
+**SoulX-LiveAct** presents a novel framework that enables **lifelike, multimodal-controlled, high-fidelity** human animation video generation for real-time streaming interactions.
 
 (I) We identify diffusion-step-aligned neighbor latents as a key inductive bias for AR diffusion, providing a principled and theoretically grounded **Neighbor Forcing** for step-consistent AR video generation.
 
@@ -21,21 +21,21 @@
 
 <div align="center">
   <a href='http://arxiv.org/abs/2603.11746'><img src='https://img.shields.io/badge/Technical-Report-red'></a>
-  <a href='https://demopagedemo.github.io/LiveAct/'><img src='https://img.shields.io/badge/Project-Page-green'></a>
+  <a href='https://soul-ailab.github.io/soulx-liveact/'><img src='https://img.shields.io/badge/Project-Page-green'></a>
   <a href='https://github.com/Soul-AILab/SoulX-LiveAct'><img src='https://img.shields.io/badge/Github-Home-blue'></a>
   <a href='https://huggingface.co/Soul-AILab/LiveAct'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow'></a>
-
 </div>
 
 
 ## 🔥🔥🔥 News
 
+* 📢 Mar 17, 2026: We now support consumer GPUs (e.g., RTX 4090, RTX 5090) with FP8 KV cache and CPU model offloading. In our tests, the 18B model (14B Wan2.1 + 4B audio module) achieves a throughput of 6 FPS on a single RTX 5090.
 * 👋 Mar 16, 2026: We release the inference code and model weights of LiveAct.
 
 
 ## 🎥 Demo
 
-**Note:** Due to GitHub limitations, the videos are heavily compressed. Please refer to the [demo page](https://demopagedemo.github.io/LiveAct/) for the original results.
+[//]: # (**Note:** Due to GitHub limitations, the videos are heavily compressed. Please refer to the [demo page]&#40;https://demopagedemo.github.io/LiveAct/&#41; for the original results.)
 
 ### 👫 Podcast
 <table>
@@ -67,7 +67,7 @@
   - [x] Release inference code and checkpoints
   - [x] GUI demo Support
   - [x] End-end adaptive FP8 precision
-  - [ ] Support model offloading for consumer GPUs (e.g., RTX 4090, RTX 5090) to reduce memory usage
+  - [x] Support model offloading for consumer GPUs (e.g., RTX 4090, RTX 5090) to reduce memory usage
   - [ ] Support FP4 precision for B-series GPUs (e.g., RTX 5090, B100, B200)
   - [ ] Release training code
 
@@ -146,10 +146,51 @@ torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535)  \
     --steam_audio
 ```
 
-#### 2. Run with single GPU for Eval
+#### 2. Run with the best performance settings
 
 ```bash
-USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=7 \
+USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=0,1 \
+torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535)  \
+    generate.py \
+    --size 480*832 \
+    --ckpt_dir MODEL_PATH \
+    --wav2vec_dir chinese-wav2vec2-base \
+    --fps 24 \
+    --input_json examples/example.json
+```
+
+#### 3. Run with action or emotion editing
+
+```bash
+USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=0,1 \
+torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535)  \
+    generate.py \
+    --size 512*512 \
+    --ckpt_dir MODEL_PATH \
+    --wav2vec_dir chinese-wav2vec2-base \
+    --fps 24 \
+    --input_json examples/example_edit.json
+```
+
+#### 4. Run on RTX 4090/RTX 5090 GPUs
+**Note:** FP8 KV cache may slightly affect generation quality.
+```bash
+USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=0 \
+python generate.py \
+    --size 416*720 \
+    --ckpt_dir MODEL_PATH \
+    --wav2vec_dir chinese-wav2vec2-base \
+    --fps 24 \
+    --input_json examples/example.json \
+    --fp8_kv_cache \
+    --block_offload \
+    --t5_cpu
+```
+
+#### 5. Run with single GPU for Eval
+
+```bash
+USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=0 \
 python generate.py \
     --size 480*832 \
     --ckpt_dir MODEL_PATH \

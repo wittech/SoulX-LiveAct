@@ -64,6 +64,16 @@ def _parse_args():
         default=False,
         help="Whether to place kv cache on CPU.")
     parser.add_argument(
+        "--fp8_kv_cache",
+        action="store_true",
+        default=False,
+        help="Whether to store kv cache in FP8 and dequantize to BF16 on use.")
+    parser.add_argument(
+        "--block_offload",
+        action="store_true",
+        default=False,
+        help="Whether to offload WanModel blocks to CPU between block forwards.")
+    parser.add_argument(
         "--fps",
         type=int,
         default=24,
@@ -149,14 +159,21 @@ def generate(args):
     timesteps = [torch.tensor([_]).to(device, dtype=torch.float32) for _ in [1000.0, 937.5, 833.33333333, 0.0]]
     blksz_lst = [6, 8]
     frame_len = (height // (patch_size[1] * vae_stride[1])) * (width // (patch_size[2] * vae_stride[2]))
+    kv_cache_tokens = frame_len * sum(blksz_lst) // world_size
+    kv_cache_device = 'cpu' if args.offload_cache else device
+    kv_cache_dtype = torch.float8_e4m3fn if args.fp8_kv_cache else torch.bfloat16
+    kv_scale_shape = (1, kv_cache_tokens, 40, 1)
     kv_cache = \
         {
             i: {
                 layer_id: {
-                    'k': torch.zeros([1, frame_len * sum(blksz_lst) // world_size, 40, 128], dtype=torch.bfloat16, device='cpu' if args.offload_cache else device),
-                    'v': torch.zeros([1, frame_len * sum(blksz_lst) // world_size, 40, 128], dtype=torch.bfloat16, device='cpu' if args.offload_cache else device),
+                    'k': torch.zeros([1, kv_cache_tokens, 40, 128], dtype=kv_cache_dtype, device=kv_cache_device),
+                    'v': torch.zeros([1, kv_cache_tokens, 40, 128], dtype=kv_cache_dtype, device=kv_cache_device),
+                    'k_scale': torch.ones(kv_scale_shape, dtype=torch.float32, device=kv_cache_device) if args.fp8_kv_cache else None,
+                    'v_scale': torch.ones(kv_scale_shape, dtype=torch.float32, device=kv_cache_device) if args.fp8_kv_cache else None,
                     'mean_memory': args.mean_memory,
                     'offload_cache': args.offload_cache,
+                    'fp8_kv_cache': args.fp8_kv_cache,
                 }
                 for layer_id in range(40)
             } for i in range(len(timesteps) - 1)
@@ -165,19 +182,31 @@ def generate(args):
         kv_cache_null_audio = \
             {
                 i: {layer_id: {
-                    'k': torch.zeros([1, frame_len * sum(blksz_lst) // world_size, 40, 128], dtype=torch.bfloat16, device='cpu' if args.offload_cache else device),
-                    'v': torch.zeros([1, frame_len * sum(blksz_lst) // world_size, 40, 128], dtype=torch.bfloat16, device='cpu' if args.offload_cache else device),
+                    'k': torch.zeros([1, kv_cache_tokens, 40, 128], dtype=kv_cache_dtype, device=kv_cache_device),
+                    'v': torch.zeros([1, kv_cache_tokens, 40, 128], dtype=kv_cache_dtype, device=kv_cache_device),
+                    'k_scale': torch.ones(kv_scale_shape, dtype=torch.float32, device=kv_cache_device) if args.fp8_kv_cache else None,
+                    'v_scale': torch.ones(kv_scale_shape, dtype=torch.float32, device=kv_cache_device) if args.fp8_kv_cache else None,
                     'mean_memory': args.mean_memory,
                     'offload_cache': args.offload_cache,
+                    'fp8_kv_cache': args.fp8_kv_cache,
                 } for layer_id in range(40)} for i in range(len(timesteps) - 1)
             }
 
     wan_i2v_model = WanModel.from_pretrained(args.ckpt_dir, torch_dtype=torch.bfloat16, low_cpu_mem_usage=False)
-    wan_i2v_model = wan_i2v_model.to(device, dtype=torch.bfloat16)
+    wan_i2v_model = wan_i2v_model.to(dtype=torch.bfloat16)
     for n in range(40):
         wan_i2v_model.blocks[n].self_attn.init_kvidx(frame_len, world_size)
 
     enable_fp8_gemm(wan_i2v_model, options=FP8GemmOptions())
+    if args.block_offload:
+        for name, child in wan_i2v_model.named_children():
+            if name != 'blocks':
+                child.to(device)
+        wan_i2v_model.enable_block_offload(
+            onload_device=torch.device(f"cuda:{device}"),
+        )
+    else:
+        wan_i2v_model = wan_i2v_model.to(device)
     wan_i2v_model.eval()
     wan_i2v_model = torch.compile(wan_i2v_model, mode="max-autotune-no-cudagraphs", backend="inductor", dynamic=False)
 
@@ -239,6 +268,7 @@ def generate(args):
         clip.model.to(device)
         clip_context = clip.visual(cond_image)  # 1, 257, 1280
         clip.model.cpu()
+        torch_gc()
 
         audio_ori, sr_ori = torchaudio.load(audio_path)  # y: [channels, time]
         def resample_audio(audio, sr, fps):

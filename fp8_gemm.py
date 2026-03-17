@@ -110,9 +110,10 @@ class FP8Linear(nn.Module):
             pad_output=False,
         )
 
-        # Lazy weight cache (per-device).
-        self._fp8_weight: Optional[torch.Tensor] = None  # [K, N] view
-        self._fp8_weight_scale: Optional[torch.Tensor] = None  # scalar or vec
+        # Lazy weight cache (per-device). Register these as non-persistent
+        # buffers so module.to()/cpu()/cuda() also migrates the FP8 cache.
+        self.register_buffer("_fp8_weight", None, persistent=False)  # [K, N] view
+        self.register_buffer("_fp8_weight_scale", None, persistent=False)  # scalar or vec
         self._weight_cache_device: Optional[torch.device] = None
 
         # Track when weights change (best-effort) in "keep" mode.
@@ -130,11 +131,59 @@ class FP8Linear(nn.Module):
         # state_dict stays natural (weights/bias remain at linear.weight / linear.bias).
         return cls(linear, options=options)
 
+    def __deepcopy__(self, memo):
+        if id(self) in memo:
+            return memo[id(self)]
+
+        if self.linear is not None:
+            src_weight = self.linear.weight.detach()
+            src_bias = self.linear.bias.detach() if self.linear.bias is not None else None
+        elif self._fp16_weight_cpu is not None:
+            src_weight = self._fp16_weight_cpu.detach()
+            src_bias = self._fp16_bias_cpu.detach() if self._fp16_bias_cpu is not None else None
+        else:
+            raise RuntimeError("FP8Linear cannot be deep-copied without an FP16 weight source.")
+
+        linear = nn.Linear(
+            in_features=src_weight.shape[1],
+            out_features=src_weight.shape[0],
+            bias=src_bias is not None,
+            device=src_weight.device,
+            dtype=src_weight.dtype,
+        )
+        linear.weight.data.copy_(src_weight)
+        if src_bias is not None:
+            linear.bias.data.copy_(src_bias)
+
+        cloned = FP8Linear(linear, options=self.options)
+        memo[id(self)] = cloned
+
+        if self._fp16_weight_cpu is not None:
+            cloned._fp16_weight_cpu = self._fp16_weight_cpu.detach().clone()
+        if self._fp16_bias_cpu is not None:
+            cloned._fp16_bias_cpu = self._fp16_bias_cpu.detach().clone()
+
+        if self._fp8_weight is not None:
+            cloned._fp8_weight = self._fp8_weight.detach().clone()
+        if self._fp8_weight_scale is not None:
+            cloned._fp8_weight_scale = self._fp8_weight_scale.detach().clone()
+
+        cloned._weight_cache_device = self._weight_cache_device
+        cloned._last_weight_version = self._last_weight_version
+        return cloned
+
     def invalidate_weight_cache(self) -> None:
         self._fp8_weight = None
         self._fp8_weight_scale = None
         self._weight_cache_device = None
         self._last_weight_version = None
+
+    def _cached_fp8_device(self) -> Optional[torch.device]:
+        if self._fp8_weight is None or self._fp8_weight_scale is None:
+            return None
+        if self._fp8_weight.device != self._fp8_weight_scale.device:
+            return None
+        return self._fp8_weight.device
 
     def materialize_fp8_weight(self, device: torch.device) -> None:
         """Force FP8 weight materialization on the given device."""
@@ -142,18 +191,19 @@ class FP8Linear(nn.Module):
 
     def _maybe_requantize_weight(self, device: torch.device) -> None:
         # Detect weight changes (best-effort) and/or device changes.
+        cache_device = self._cached_fp8_device()
         version: Optional[int] = None
         if self.linear is not None:
             weight = self.linear.weight
             v = getattr(weight, "_version", None)
             version = v if isinstance(v, int) else None
             if (self._fp8_weight is not None and self._fp8_weight_scale is not None
-                    and self._weight_cache_device == device
+                    and cache_device == device
                     and (version is None or version == self._last_weight_version)):
                 return
         else:
             if (self._fp8_weight is not None and self._fp8_weight_scale is not None
-                    and self._weight_cache_device == device):
+                    and cache_device == device):
                 return
 
         # vLLM convention for CUTLASS: quantize original [N, K] weight, then
@@ -175,7 +225,7 @@ class FP8Linear(nn.Module):
         qweight_n_k, w_scale = self._ops.scaled_fp8_quant(w_n_k, scale=None)
         self._fp8_weight = qweight_n_k.t()
         self._fp8_weight_scale = w_scale
-        self._weight_cache_device = device
+        self._weight_cache_device = self._cached_fp8_device()
         self._last_weight_version = version
 
         # If requested, discard FP16 weights once FP8 is materialized.
