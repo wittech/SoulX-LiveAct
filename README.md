@@ -16,7 +16,7 @@
 
 (II) We introduce **ConvKV Memory**, a lightweight plug-in compression mechanism that enables constant-memory hour-scale video generation with negligible overhead.
 
-(III) We develop an optimized real-time system that achieves **20 FPS using only two H100/H200 GPUs** with end-end adaptive FP8 precision, sequence parallelism, and operator fusion at 720×416 or 512×512 resolution.
+(III) We develop an optimized real-time system that achieves **20 FPS using only two H100/H200 GPUs** with end-end adaptive FP8 precision, sequence parallelism, and communication-computation parallelism at 720×416 or 512×512 resolution.
 
 
 <div align="center">
@@ -35,24 +35,30 @@
 
 ## 🎥 Demo
 
+**Note:** Due to GitHub limitations, the videos are heavily compressed. Please refer to the [demo page](https://demopagedemo.github.io/LiveAct/) for the original results.
+
 ### 👫 Podcast
-<div>
-  <video controls playsInline src="./assets/podcast.mp4" width="40%"></video>
-</div>
+<table>
+  <tr>
+    <td><video controls playsinline width="666" src="https://github.com/user-attachments/assets/6a01e675-39db-4431-bacf-cb6f0f6c98b3"></video></td>
+  </tr>
+</table>
+
 
 ### 🎤 Music & Talk Show
 <table>
   <tr>
-    <td><video controls playsinline width="360" src="./assets/teaser1.mp4"></video></td>
-    <td><video controls playsinline width="360" src="./assets/teaser2.mp4"></video></td>
+    <td><video controls playsinline width="360" src="https://github.com/user-attachments/assets/9fd4fbcf-3e76-48ca-a8e0-2a46da18da5c"></video></td>
+    <td><video controls playsinline width="360" src="https://github.com/user-attachments/assets/9ac3ad4b-db6a-470b-9f4f-6ab9d1c8d998"></video></td>
   </tr>
 </table>
+
 
 ### 📱 FaceTime
 <table>
   <tr>
-    <td><video controls playsinline width="360" src="./assets/1.mp4"></video></td>
-    <td><video controls playsinline width="360" src="./assets/2.mp4"></video></td>
+    <td><video controls playsinline width="360" src="https://github.com/user-attachments/assets/143bb565-078a-48ba-8daa-f2fb56616189"></video></td>
+    <td><video controls playsinline width="360" src="https://github.com/user-attachments/assets/5619381e-bd8c-4aac-a1d6-2a1fdfe9d673"></video></td>
   </tr>
 </table>
 
@@ -62,7 +68,6 @@
   - [x] Release inference code and checkpoints
   - [x] GUI demo Support
   - [x] End-end adaptive FP8 precision
-  - [ ] Support model offloading for consumer GPUs (e.g., RTX 4090, RTX 5090) to reduce memory usage
   - [ ] Support FP4 precision for B-series GPUs (e.g., RTX 5090, B100, B200)
   - [ ] Release training code
 
@@ -83,14 +88,11 @@ conda install conda-forge::sox -y
 To enable fp8 attention kernel, you need to install SageAttention:
 * Install SageAttention:
   ```bash
-  git clone https://github.com/thu-ml/SageAttention.git
-  cd SageAttention
-  git checkout v2.2.0
-  python setup.py install
+  pip install sageattention==2.2.0 --no-build-isolation
   ```
 
 * (Optional) Install the modified version of SageAttention: 
-  To enable SageAttention for QKV's operator fusion, you need to install it by the following command:
+  To enable SageAttention for QKV communication–computation parallelism, you need to install it by the following command:
 
   ```bash
   git clone https://github.com/ZhiqiJiang/SageAttentionFusion.git
@@ -102,14 +104,6 @@ To enable fp8 attention kernel, you need to install SageAttention:
   To enable fp8 gemm kernel, you need to install vllm:
   ```bash
   pip install vllm==0.11.0
-  ```
-
-#### Step 4 Install LightVAE:：
-
-  ```bash
-  git clone https://github.com/ModelTC/LightX2V
-  cd LightX2V
-  python setup_vae.py install
   ```
 
 
@@ -174,6 +168,10 @@ python generate.py \
 ### 💻 GUI demo
 Run LiveAct inference on the GUI demo and evaluate real-time performance.
 
+<div>
+  <video controls playsInline src="https://github.com/user-attachments/assets/7150345d-693f-4250-af07-e94daa6ef6ed" width="50%"></video>
+</div>
+
 **Note:** The first few blocks during the initial run require warm-up. Normal performance will be observed from the second run onward.
 
 ```bash
@@ -186,9 +184,6 @@ torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535) \
   --video_save_path ./generated_videos
 ```
 
-<div>
-  <video controls playsInline src="./assets/demo.mp4" width="50%"></video>
-</div>
 
 
 ## 📚 Citation
@@ -204,6 +199,3 @@ torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535) \
       url={https://arxiv.org/abs/2603.11746}, 
 }
 ```
-
-## 🙏 Acknowledgements
-We would like to thank the contributors to the [Transformers](https://github.com/huggingface/transformers), [Diffusers](https://github.com/huggingface/diffusers) , [HuggingFace](https://huggingface.co/) and [Qwen-VL](https://github.com/QwenLM/Qwen-VL), for their open research and exploration.
