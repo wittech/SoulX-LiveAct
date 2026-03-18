@@ -30,7 +30,7 @@
 ## 🔥🔥🔥 News
 
 * 📢 Mar 18, 2026: We now support consumer GPUs (e.g., RTX 4090, RTX 5090) with FP8 KV cache and CPU model offloading. In our tests, the 18B model (14B Wan2.1 + 4B audio module) achieves a throughput of 6 FPS on a single RTX 5090.
-* 👋 Mar 16, 2026: We release the inference code and model weights of LiveAct.
+* 👋 Mar 16, 2026: We release the inference code and model weights of SoulX-LiveAct.
 
 
 ## 🎥 Demo
@@ -121,10 +121,10 @@ To enable fp8 attention kernel, you need to install SageAttention:
 ### 🤗 Download Checkpoints
 
 ### Model Cards
-| ModelName             | Download                                                    |
-|-----------------------|-------------------------------------------------------------| 
-| LiveAct               | [🤗 Huggingface](https://huggingface.co/Soul-AILab/LiveAct) |
-| chinese-wav2vec2-base |      🤗 [Huggingface](https://huggingface.co/TencentGameMate/chinese-wav2vec2-base)          |
+| ModelName             | Download                                                                       |
+|-----------------------|--------------------------------------------------------------------------------| 
+| SoulX-LiveAct         | [🤗 Huggingface](https://huggingface.co/Soul-AILab/LiveAct)                    |
+| chinese-wav2vec2-base | [🤗 Huggingface](https://huggingface.co/TencentGameMate/chinese-wav2vec2-base) |
 
 
 ### 🔑 Inference
@@ -216,9 +216,11 @@ python generate.py \
 | `--seed`          | int   | No       | 42      | The seed to use for generating the image or video.                                            |
 | `--steam_audio`   | bool  | No       | false   | Whether inference with steaming audio.                                                        |
 | `--mean_memory`   | bool  | No       | false   | Whether to use the mean memory strategy during inference for further performance improvement. |
+| `--fp8_kv_cache`   | bool  | No       | false   | Whether to store kv cache in FP8 and dequantize to BF16 on use. FP8 KV cache may slightly affect generation quality.|
+| `--block_offload`   | bool  | No       | false   | Whether to offload WanModel blocks to CPU between block forwards.|
 
 ### 💻 GUI demo
-Run LiveAct inference on the GUI demo and evaluate real-time performance.
+Run SoulX-LiveAct inference on the GUI demo and evaluate real-time performance.
 
 <div>
   <video controls playsInline src="https://github.com/user-attachments/assets/7150345d-693f-4250-af07-e94daa6ef6ed" width="50%"></video>
