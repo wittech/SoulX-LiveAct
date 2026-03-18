@@ -1,6 +1,6 @@
-torch==2.8.0
-torchaudio==2.8.0
-torchvision==0.23.0
+torch==2.10.0+cu130
+torchaudio==2.10.0+cu130
+torchvision==0.25.0+cu130
 opencv-python>=4.11.0.86
 diffusers>=0.31.0
 transformers>=4.49.0
