@@ -40,7 +40,7 @@
 ### 👫 Podcast
 <table>
   <tr>
-    <td><video controls playsinline width="666" src="https://github.com/user-attachments/assets/6a01e675-39db-4431-bacf-cb6f0f6c98b3"></video></td>
+    <td><video controls playsinline width="666" src="https://github.com/user-attachments/assets/7d50441c-2a90-48c7-a557-c375936f2b65"></video></td>
   </tr>
 </table>
 
