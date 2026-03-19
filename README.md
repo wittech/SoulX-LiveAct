@@ -123,7 +123,7 @@ To enable fp8 attention kernel, you need to install SageAttention:
 ### Model Cards
 | ModelName             | Download                                                                                                                       |
 |-----------------------|--------------------------------------------------------------------------------------------------------------------------------| 
-| SoulX-LiveAct         | [🤗 Huggingface](https://huggingface.co/Soul-AILab/LiveAct),   [魔搭 ModelScope](https://modelscope.cn/models/owen3452/LiveAct/) |
+| SoulX-LiveAct         | [🤗 Huggingface](https://huggingface.co/Soul-AILab/LiveAct),   [魔搭 ModelScope](https://modelscope.cn/models/Soul-AILab/LiveAct) |
 | chinese-wav2vec2-base | [🤗 Huggingface](https://huggingface.co/TencentGameMate/chinese-wav2vec2-base)                                                 |
 
 
