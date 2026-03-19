@@ -146,20 +146,7 @@ torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535)  \
     --steam_audio
 ```
 
-#### 2. Run with the best performance settings
-
-```bash
-USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=0,1 \
-torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535)  \
-    generate.py \
-    --size 480*832 \
-    --ckpt_dir MODEL_PATH \
-    --wav2vec_dir chinese-wav2vec2-base \
-    --fps 24 \
-    --input_json examples/example.json
-```
-
-#### 3. Run with action or emotion editing
+#### 2. Run with action or emotion editing at real-time streaming performance
 
 ```bash
 USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=0,1 \
@@ -170,6 +157,19 @@ torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535)  \
     --wav2vec_dir chinese-wav2vec2-base \
     --fps 24 \
     --input_json examples/example_edit.json
+```
+
+#### 3. Run with the best performance settings
+
+```bash
+USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=0,1 \
+torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535)  \
+    generate.py \
+    --size 480*832 \
+    --ckpt_dir MODEL_PATH \
+    --wav2vec_dir chinese-wav2vec2-base \
+    --fps 24 \
+    --input_json examples/example.json
 ```
 
 #### 4. Run on RTX 4090/RTX 5090 GPUs
@@ -217,7 +217,8 @@ python generate.py \
 | `--steam_audio`   | bool  | No       | false   | Whether inference with steaming audio.                                                        |
 | `--mean_memory`   | bool  | No       | false   | Whether to use the mean memory strategy during inference for further performance improvement. |
 | `--fp8_kv_cache`   | bool  | No       | false   | Whether to store kv cache in FP8 and dequantize to BF16 on use. FP8 KV cache may slightly affect generation quality.|
-| `--block_offload`   | bool  | No       | false   | Whether to offload WanModel blocks to CPU between block forwards.|
+| `--block_offload`   | bool  | No       | false   | Whether to offload model blocks to CPU between block forwards.|
+
 
 ### 💻 GUI demo
 Run SoulX-LiveAct inference on the GUI demo and evaluate real-time performance.
@@ -228,6 +229,8 @@ Run SoulX-LiveAct inference on the GUI demo and evaluate real-time performance.
 
 **Note:** The first few blocks during the initial run require warm-up. Normal performance will be observed from the second run onward.
 
+#### 1. Run real-time streaming inference on two H100/H200 GPUs
+
 ```bash
 USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=0,1 \
 torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535) \
@@ -235,6 +238,20 @@ torchrun --nproc_per_node=2 --master_port=$(shuf -n 1 -i 10000-65535) \
   --ckpt_dir MODEL_PATH \
   --wav2vec_dir chinese-wav2vec2-base \
   --size 416*720 \
+  --video_save_path ./generated_videos
+```
+
+#### 2. Run on RTX 4090/RTX 5090 GPUs
+```bash
+USE_CHANNELS_LAST_3D=1 CUDA_VISIBLE_DEVICES=0 \
+torchrun --nproc_per_node=1 --master_port=$(shuf -n 1 -i 10000-65535) \
+  demo.py \
+  --ckpt_dir MODEL_PATH \
+  --wav2vec_dir chinese-wav2vec2-base \
+  --size 416*720 \
+  --fp8_kv_cache \
+  --block_offload \
+  --t5_cpu \
   --video_save_path ./generated_videos
 ```
 
